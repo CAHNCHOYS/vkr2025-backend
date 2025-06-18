@@ -75,20 +75,26 @@ export const loadTestQuestions = async (req, res) => {
   try {
     const testId = req.params.test_id;
     console.log(testId);
+
+    const [tests] = await connection
+      .promise()
+      .query(`SELECT test_name from tests WHERE id = ${testId}`);
+
+    console.log(tests);
+    if (!tests.length) {
+      res
+        .status(400)
+        .json({ error: "Тест не найден, скорее всего его не существует" });
+      return;
+    }
+
     let [results] = await connection
       .promise()
       .query(
-        `SELECT questions.id, questions.question_type as type, question_text as text, right_answer as rightAnswer, answers, weight, order_in_test as orderInTest, tests.test_name FROM questions INNER JOIN tests on questions.test_id = tests.id WHERE tests.id = ${testId}`
+        `SELECT questions.id, questions.question_type as type, question_text as text, right_answer as rightAnswer, answers, weight, order_in_test as orderInTest FROM questions INNER JOIN tests on questions.test_id = tests.id WHERE tests.id = ${testId}`
       );
 
-    const testName = results[0]?.test_name || "нет вопросово";
-
-    results = results.map((q) => {
-      delete q["test_name"];
-      return q;
-    });
-    console.log("res", results);
-
+    const testName = tests[0].test_name;
     res.json({ questions: results, testName });
   } catch (error) {
     console.log(error);
